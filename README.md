@@ -1,0 +1,2 @@
+# Ganesh.tech
+Technical solutions 
