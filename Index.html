@@ -1,0 +1,262 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ganesh Technology | Customer Support</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,sans-serif;background:#f1f5f9;color:#172033}
+header{background:#155eef;color:white;padding:25px 18px;border-radius:0 0 22px 22px}
+.container{max-width:650px;margin:auto;padding:16px}
+.logo{font-size:26px;font-weight:bold}
+header p{color:#dbeafe}
+.card{background:white;padding:20px;border-radius:15px;margin:16px 0;box-shadow:0 3px 12px #00000008}
+h2{font-size:19px;margin-top:0}
+label{display:block;font-weight:bold;font-size:14px;margin:14px 0 7px}
+input,select,textarea{width:100%;padding:12px;border:1px solid #cbd5e1;border-radius:8px;font-size:15px;background:white}
+button{background:#155eef;color:white;border:0;padding:13px;border-radius:9px;font-weight:bold;cursor:pointer}
+.submit{width:100%;margin-top:18px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
+.stat{background:white;padding:13px 8px;border-radius:12px;text-align:center}
+.stat strong{display:block;font-size:24px;margin-top:7px}
+.small{font-size:12px;color:#64748b}
+.ticket{border-top:1px solid #e2e8f0;padding:15px 0;overflow-wrap:anywhere}
+.badge{display:inline-block;background:#dbeafe;color:#1d4ed8;padding:5px 9px;border-radius:20px;font-size:12px}
+.done{background:#dcfce7;color:#166534}
+.warning{background:#fef3c7;color:#92400e}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.actions button{padding:9px;font-size:12px}
+.danger{background:#dc2626}
+footer{text-align:center;color:#64748b;font-size:12px;padding:20px}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="container">
+    <div class="logo">GT | Ganesh Technology</div>
+    <p>Customer Support & Issue Management</p>
+    <h2>How can we help you?</h2>
+    <p>Submit your technical complaint and track your ticket.</p>
+  </div>
+</header>
+
+<main class="container">
+  <div class="stats">
+    <div class="stat">Total<strong id="total">0</strong></div>
+    <div class="stat">Pending<strong id="pending">0</strong></div>
+    <div class="stat">Resolved<strong id="resolved">0</strong></div>
+  </div>
+
+  <section class="card">
+    <h2>Submit an Issue</h2>
+    <form id="issueForm">
+      <label for="name">Customer Name *</label>
+      <input id="name" required maxlength="100" placeholder="Enter your name">
+
+      <label for="phone">Mobile Number *</label>
+      <input id="phone" type="tel" required maxlength="20"
+        placeholder="Enter your mobile number">
+
+      <label for="category">Issue Category *</label>
+      <select id="category" required>
+        <option value="">Select category</option>
+        <option>Computer / Laptop</option>
+        <option>Software / Application</option>
+        <option>Internet / Network</option>
+        <option>Printer / Accessories</option>
+        <option>Website / Technical Support</option>
+        <option>Payment / Billing</option>
+        <option>Other</option>
+      </select>
+
+      <label for="priority">Priority</label>
+      <select id="priority">
+        <option>Normal</option>
+        <option>Urgent</option>
+        <option>Low</option>
+      </select>
+
+      <label for="description">Describe Your Issue *</label>
+      <textarea id="description" required maxlength="1500"
+        rows="4" placeholder="Explain the problem..."></textarea>
+
+      <button class="submit" type="submit">Submit Complaint</button>
+    </form>
+    <p id="message" role="status"></p>
+  </section>
+
+  <section class="card">
+    <h2>Track Your Complaint</h2>
+    <label for="searchTicket">Ticket Number</label>
+    <input id="searchTicket" placeholder="Example: GT-1001">
+    <button style="margin-top:10px" onclick="trackTicket()">
+      Track Ticket
+    </button>
+    <div id="trackResult" aria-live="polite"></div>
+  </section>
+
+  <section class="card">
+    <h2>Customer Issues</h2>
+    <p class="small">Issues saved on this device are shown below.</p>
+    <div id="issueList"></div>
+  </section>
+</main>
+
+<footer>
+  © Ganesh Technology · Customer Support
+</footer>
+
+<script>
+const STORAGE_KEY = "ganeshTechnologyIssues";
+
+function loadIssues() {
+  try {
+    return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+  } catch {
+    return [];
+  }
+}
+
+let issues = loadIssues();
+
+function saveIssues() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(issues));
+    return true;
+  } catch {
+    alert("Unable to save. Browser storage may be unavailable.");
+    return false;
+  }
+}
+
+function escapeHTML(value) {
+  return String(value).replace(/[&<>"']/g, char => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;"
+  })[char]);
+}
+
+function renderIssues() {
+  document.getElementById("total").textContent = issues.length;
+  document.getElementById("pending").textContent =
+    issues.filter(i => i.status !== "Resolved").length;
+  document.getElementById("resolved").textContent =
+    issues.filter(i => i.status === "Resolved").length;
+
+  const list = document.getElementById("issueList");
+
+  if (!issues.length) {
+    list.innerHTML = "<p class='small'>No complaints submitted yet.</p>";
+    return;
+  }
+
+  list.innerHTML = [...issues].reverse().map(issue => `
+    <article class="ticket">
+      <strong>${escapeHTML(issue.category)}</strong>
+      <p class="small">Ticket: ${escapeHTML(issue.id)}</p>
+      <span class="badge ${issue.status === "Resolved" ? "done" :
+        issue.status === "Open" ? "warning" : ""}">
+        ${escapeHTML(issue.status)}
+      </span>
+      <p>${escapeHTML(issue.description)}</p>
+      <p class="small">Customer: ${escapeHTML(issue.name)}</p>
+      <p class="small">Priority: ${escapeHTML(issue.priority)}</p>
+      <label for="status-${escapeHTML(issue.id)}">Update Status</label>
+      <select id="status-${escapeHTML(issue.id)}"
+        onchange="updateStatus('${escapeHTML(issue.id)}',this.value)">
+        ${["Open","In Progress","Resolved"].map(status =>
+          `<option ${issue.status === status ? "selected" : ""}>
+            ${status}
+          </option>`).join("")}
+      </select>
+    </article>
+  `).join("");
+}
+
+document.getElementById("issueForm").addEventListener("submit", event => {
+  event.preventDefault();
+
+  const issue = {
+    id: "GT-" + Date.now().toString().slice(-8),
+    name: document.getElementById("name").value.trim(),
+    phone: document.getElementById("phone").value.trim(),
+    category: document.getElementById("category").value,
+    priority: document.getElementById("priority").value,
+    description: document.getElementById("description").value.trim(),
+    status: "Open",
+    date: new Date().toLocaleDateString("en-IN")
+  };
+
+  if (!issue.name || !issue.phone ||
+      !issue.category || !issue.description) {
+    alert("Please complete all required fields.");
+    return;
+  }
+
+  if (!/^[0-9+ ()-]{8,20}$/.test(issue.phone)) {
+    alert("Please enter a valid contact number.");
+    return;
+  }
+
+  issues.push(issue);
+
+  if (!saveIssues()) {
+    issues.pop();
+    return;
+  }
+
+  document.getElementById("message").innerHTML =
+    "Complaint submitted! Your ticket number is <strong>" +
+    escapeHTML(issue.id) + "</strong>";
+
+  event.target.reset();
+  renderIssues();
+});
+
+function updateStatus(id, status) {
+  const issue = issues.find(item => item.id === id);
+  if (!issue || !["Open", "In Progress", "Resolved"].includes(status))
+    return;
+
+  const previous = issue.status;
+  issue.status = status;
+
+  if (!saveIssues()) issue.status = previous;
+  renderIssues();
+}
+
+function trackTicket() {
+  const id = document.getElementById("searchTicket")
+    .value.trim().toUpperCase();
+  const result = document.getElementById("trackResult");
+  const issue = issues.find(item => item.id.toUpperCase() === id);
+
+  if (!id) {
+    result.textContent = "Enter your ticket number.";
+    return;
+  }
+
+  if (!issue) {
+    result.textContent = "Ticket not found on this device.";
+    return;
+  }
+
+  result.innerHTML = `
+    <div class="ticket">
+      <strong>${escapeHTML(issue.id)}</strong>
+      <p>${escapeHTML(issue.category)}</p>
+      <p>Status: <strong>${escapeHTML(issue.status)}</strong></p>
+      <p class="small">Submitted: ${escapeHTML(issue.date)}</p>
+    </div>`;
+}
+
+renderIssues();
+</script>
+</body>
+</html>
